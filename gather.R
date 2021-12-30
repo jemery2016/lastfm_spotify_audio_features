@@ -42,8 +42,8 @@ library(eply)
 library(abind)
 
 #Here are my api ID's 
-my_client_id <- ''
-my_client_secret <- ''
+my_client_id <- '9c26f0649d9b47c3934844fcfe59c6fa'
+my_client_secret <- '1395c21b03a94a289b5d4255d2df8a89'
 
 #Setting them as environment variables for ease of use
 Sys.setenv(SPOTIFY_CLIENT_ID = my_client_id)
@@ -61,7 +61,7 @@ get_lfm_features <- function(user, timezone, par_workers){
                                 offset = 0,
                                 include_external = NULL,
                                 authorization = get_spotify_access_token(),
-                                include_meta_info = FALSE) {
+                                include_meta_info = FALSE){
     
     base_url <- 'https://api.spotify.com/v1/search'
     
@@ -128,9 +128,6 @@ get_lfm_features <- function(user, timezone, par_workers){
     #Creating vector of search words (artist name + track name)
     search_vec <- paste(tracks$artist, tracks$track)
     #loop for parallel
-    #Now we need to Register Parallel workers
-    cl <- makeCluster(3)
-    registerDoParallel(cl)
     foreach_result <- foreach(
       i = 1:length(search_vec),
       #importing required packages
@@ -174,9 +171,6 @@ get_lfm_features <- function(user, timezone, par_workers){
       }
       id
     }
-    # #End the parallel workers
-    registerDoSEQ()
-    stopCluster(cl)
     #Adds column of ids to tracks
     return(add_column(tracks, spotify_id = foreach_result))
   }
@@ -206,7 +200,7 @@ get_lfm_features <- function(user, timezone, par_workers){
   
   #Now we can actually gather the Audio features using the IDs
   #Get features function
-  get_features <- function(tracks) {
+  get_features <- function(tracks){
     chunk_size <- 100
     chunks <-
       cut_interval(1:nrow(tracks), length = chunk_size, labels = FALSE)
@@ -233,7 +227,7 @@ get_lfm_features <- function(user, timezone, par_workers){
   
   ###Cleaning Audio Features
   #Cleans key
-  clean_key <- function(tracks) {
+  clean_key <- function(tracks){
     output_key <- vector(mode = "character", length = nrow(tracks))
     for (i in 1:nrow(tracks)) {
       output_key[[i]] <-
@@ -293,25 +287,20 @@ get_lfm_features <- function(user, timezone, par_workers){
     rename(plays = n)
   
   #First pass to get spotify IDs
-  #This will take some time
-  #initialize parallel workers
+  #Now we need to Register Parallel workers
   cl <- makeCluster(par_workers)
   registerDoParallel(cl)
+  #This will take some time
   tracks <- get_spot_id(tracks)
-  #End Parallel workers
-  registerDoSEQ()
-  stopCluster(cl) 
   
   #Add the IDs from further passes
   tracks <- scooper(tracks)
-  
+
   #Filter out tracks that didn't get an ID
   tracks <- tracks %>% 
     filter(!is.na(spotify_id))
   
   #Add features to our tracks df
-  cl <- makeCluster(par_workers)
-  registerDoParallel(cl)
   tracks <- get_features(tracks)
   registerDoSEQ()
   stopCluster(cl) 
@@ -334,6 +323,21 @@ get_lfm_features <- function(user, timezone, par_workers){
   
   return(tracks)
 }
+
+time <- Sys.time()
+test <- get_lfm_features(user = "Julianna156789",
+                         timezone = "EST",
+                         par_workers = 3)
+(time <- Sys.time() - time)
+
+
+time <- Sys.time()
+test <- get_lfm_features(user = "eniiler",
+                         timezone = "EST",
+                         par_workers = 3)
+(time <- Sys.time() - time)
+
+
 
 get_analysis <- function(tracks){
   foreach_result <- foreach(
@@ -359,9 +363,9 @@ get_analysis <- function(tracks){
       dim = c(nrow(analysis$segments), 12, 2)
     )
   }
-  
+
   big_len <- max(sapply(foreach_result, dim)[1,])
-  
+
   for(i in 1:length(foreach_result)){
     if (
       dim(foreach_result[[i]])[1] < big_len
@@ -382,15 +386,13 @@ get_analysis <- function(tracks){
   return(emty)
 }
 
-cl <- makeCluster(3)
-registerDoParallel(cl)
-time <- Sys.time() 
-my_pitch_timbre <- get_analysis(tracks_w_names[1:700,])
-(time <- Sys.time() - time)
-#beep()
-registerDoSEQ()
-stopCluster(cl) 
-#save(my_pitch_timbre, file = "C:\\Users\\Admin\\Desktop\\my_pitch_timbre.RData")
-#load("C:\\Users\\Admin\\Desktop\\my_pitch_timbre.RData")
+# cl <- makeCluster(3)
+# registerDoParallel(cl)
+# time <- Sys.time() 
+# my_pitch_timbre <- get_analysis(tracks_w_names[1:700,])
+# (time <- Sys.time() - time)
+# beep()
+# registerDoSEQ()
+# stopCluster(cl) 
 
 
