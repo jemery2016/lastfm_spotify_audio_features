@@ -42,8 +42,8 @@ library(eply)
 library(abind)
 
 #Here are my api ID's 
-my_client_id <- '9c26f0649d9b47c3934844fcfe59c6fa'
-my_client_secret <- '1395c21b03a94a289b5d4255d2df8a89'
+my_client_id <- ''
+my_client_secret <- ''
 
 #Setting them as environment variables for ease of use
 Sys.setenv(SPOTIFY_CLIENT_ID = my_client_id)
