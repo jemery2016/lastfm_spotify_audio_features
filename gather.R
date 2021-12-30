@@ -294,7 +294,13 @@ get_lfm_features <- function(user, timezone, par_workers){
   
   #First pass to get spotify IDs
   #This will take some time
+  #initialize parallel workers
+  cl <- makeCluster(par_workers)
+  registerDoParallel(cl)
   tracks <- get_spot_id(tracks)
+  #End Parallel workers
+  registerDoSEQ()
+  stopCluster(cl) 
   
   #Add the IDs from further passes
   tracks <- scooper(tracks)
@@ -303,14 +309,10 @@ get_lfm_features <- function(user, timezone, par_workers){
   tracks <- tracks %>% 
     filter(!is.na(spotify_id))
   
-  #initialize parallel workers
+  #Add features to our tracks df
   cl <- makeCluster(par_workers)
   registerDoParallel(cl)
-  
-  #Add features to our tracks df
   tracks <- get_features(tracks)
-  
-  #End Parallel workers
   registerDoSEQ()
   stopCluster(cl) 
   
@@ -327,10 +329,11 @@ get_lfm_features <- function(user, timezone, par_workers){
   #cleaning mode
   tracks <- clean_mode(tracks)
   
+  #changing duration to seconds
+  tracks <- duration_to_s(tracks)
+  
   return(tracks)
 }
-
-
 
 get_analysis <- function(tracks){
   foreach_result <- foreach(
@@ -384,10 +387,10 @@ registerDoParallel(cl)
 time <- Sys.time() 
 my_pitch_timbre <- get_analysis(tracks_w_names[1:700,])
 (time <- Sys.time() - time)
-beep()
+#beep()
 registerDoSEQ()
 stopCluster(cl) 
-
-
+#save(my_pitch_timbre, file = "C:\\Users\\Admin\\Desktop\\my_pitch_timbre.RData")
+#load("C:\\Users\\Admin\\Desktop\\my_pitch_timbre.RData")
 
 
